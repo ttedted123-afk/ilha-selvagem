@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Ilha Selvagem — Protótipo</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;overflow:hidden;background:#101820;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none}
+  .panel{background:rgba(8,18,24,.72);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:9px 11px;backdrop-filter:blur(5px)}
+  #stats{position:absolute;left:10px;top:10px;min-width:155px;font-size:13px;line-height:1.55}
+  #resources{position:absolute;right:10px;top:10px;text-align:right;font-size:13px}
+  #status{position:absolute;left:50%;top:10px;transform:translateX(-50%);max-width:45vw;text-align:center;font-size:12px}
+  #crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:23px;color:#fff;text-shadow:0 1px 5px #000}
+  #controls{position:fixed;inset:0;pointer-events:none}
+  #joyBase{position:absolute;left:20px;bottom:24px;width:124px;height:124px;border-radius:50%;background:#ffffff22;border:2px solid #ffffff55;pointer-events:auto;touch-action:none}
+  #joyKnob{position:absolute;left:36px;top:36px;width:48px;height:48px;border-radius:50%;background:#ffffff77;border:2px solid #fff}
+  .btn{pointer-events:auto;touch-action:manipulation;border:1px solid #ffffff66;background:#14232ddd;color:#fff;border-radius:12px;padding:12px 13px;font-weight:700;font-size:13px;box-shadow:0 3px 12px #0005}
+  #actions{position:absolute;right:14px;bottom:22px;display:grid;grid-template-columns:repeat(2,minmax(78px,auto));gap:8px}
+  #lookHint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:11px;color:#fffbd0;background:#0005;padding:5px 9px;border-radius:9px;white-space:nowrap}
+  #menu{position:fixed;inset:0;background:linear-gradient(#07151bcc,#07151df2);display:flex;align-items:center;justify-content:center;padding:18px;z-index:5}
+  #menuCard{width:min(440px,100%);background:#12242c;border:1px solid #4b6971;border-radius:18px;padding:20px;box-shadow:0 20px 80px #0009}
+  h1{font-size:25px;margin:0 0 5px} p{color:#c7d6da;font-size:13px;line-height:1.45}
+  input{width:100%;padding:12px;border-radius:9px;border:1px solid #557078;background:#08151b;color:#fff;margin:6px 0 10px;font-size:15px}
+  .menuBtn{width:100%;margin:5px 0;padding:12px;border:0;border-radius:9px;font-weight:800;background:#b8e36c;color:#142016;font-size:14px}
+  .secondary{background:#29424b;color:#fff;border:1px solid #57717a}
+  #toast{position:fixed;left:50%;top:22%;transform:translateX(-50%);background:#07151ddd;border:1px solid #ffffff55;border-radius:10px;padding:10px 14px;z-index:10;display:none;text-align:center;font-size:13px;max-width:85vw}
+  #craftBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(330px,90vw);background:#10232bee;border:1px solid #718a8f;border-radius:14px;padding:15px;z-index:4;display:none}
+  #craftBox h3{margin:0 0 8px}
+  #craftBox button{width:100%;margin:5px 0}
+  #closeCraft{background:#29424b;color:white}
+  @media(min-width:800px){#joyBase{width:140px;height:140px}#joyKnob{left:42px;top:42px}#actions{right:24px;bottom:24px}}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="stats" class="panel">❤️ Vida: <b id="hp">100</b><br>🍖 Fome: <b id="hunger">100</b><br>🪓 Machado: <b id="axe">Não</b></div>
+  <div id="resources" class="panel">🪵 Madeira: <b id="wood">0</b><br>🪨 Pedra: <b id="stone">0</b></div>
+  <div id="status" class="panel">Ilha Selvagem • Protótipo</div>
+  <div id="crosshair">+</div>
+</div>
+<div id="controls">
+  <div id="joyBase"><div id="joyKnob"></div></div>
+  <div id="actions">
+    <button class="btn" id="collectBtn">⛏️ Coletar</button>
+    <button class="btn" id="craftBtn">🧰 Criar</button>
+    <button class="btn" id="jumpBtn">⬆️ Pular</button>
+    <button class="btn" id="leaveBtn">⏻ Menu</button>
+  </div>
+  <div id="lookHint">Arraste o lado direito da tela para olhar</div>
+</div>
+<div id="craftBox">
+  <h3>🧰 Fabricação</h3>
+  <p>Machado simples: 3 madeiras + 2 pedras. Aumenta o rendimento ao coletar.</p>
+  <button class="btn" id="makeAxe">🪓 Fabricar machado</button>
+  <button class="btn" id="closeCraft">Fechar</button>
+</div>
+<div id="toast"></div>
+<div id="menu">
+  <div id="menuCard">
+    <h1>🏝️ Ilha Selvagem</h1>
+    <p>Protótipo 3D de sobrevivência em primeira pessoa para celular. Explore, colete recursos e fabrique um machado. O multiplayer usa conexão direta entre jogadores via WebRTC.</p>
+    <label for="playerName">Seu nome</label><input id="playerName" maxlength="16" placeholder="Sobrevivente" value="Sobrevivente">
+    <button class="menuBtn" id="soloBtn">Jogar sozinho (teste local)</button>
+    <hr style="border-color:#35505a;margin:13px 0">
+    <p><b>Jogar online</b> — um jogador cria a sala e compartilha o código com o outro. Ambos precisam abrir esta página com internet.</p>
+    <button class="menuBtn" id="hostBtn">Criar sala online</button>
+    <label for="roomCode">Código da sala</label><input id="roomCode" maxlength="30" placeholder="Cole o código do anfitrião">
+    <button class="menuBtn secondary" id="joinBtn">Entrar na sala</button>
+    <p style="font-size:11px">Protótipo experimental: conexão P2P depende da rede e do serviço de sinalização gratuito. Não há servidor autoritativo nem proteção contra trapaças.</p>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(() => {
+  const $=id=>document.getElementById(id);
+  let scene,camera,renderer,clock,player, yaw=0,pitch=0,velY=0,onGround=true,started=false;
+  let hp=100,hunger=100,wood=0,stone=0,hasAxe=false;
+  let resources=[],players={},peer=null,conn=null,isHost=false,roomId="",myId="",playerName="Sobrevivente";
+  let lastNet=0,joy={x:0,y:0},lookTouch=null,joyTouch=null,keys={},toastTimer;
+  const WORLD=90, tempV=new THREE.Vector3();
+  function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.display='none',2600)}
+  function updateHUD(){$('hp').textContent=Math.max(0,Math.round(hp));$('hunger').textContent=Math.max(0,Math.round(hunger));$('wood').textContent=wood;$('stone').textContent=stone;$('axe').textContent=hasAxe?'Sim':'Não'}
+  function mat(color,roughness=1){return new THREE.MeshStandardMaterial({color,roughness})}
+  function box(x,y,z,sx,sy,sz,material){const o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
+  function makeTree(x,z){
+    const group=new THREE.Group();
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.32,2.2,7),mat(0x77502d));trunk.position.y=1.1;trunk.castShadow=true;group.add(trunk);
+    const crown=new THREE.Mesh(new THREE.ConeGeometry(1.45,3.2,7),mat([0x2c7540,0x347f42,0x27663a][Math.floor(Math.random()*3)]));crown.position.y=3.1;crown.castShadow=true;group.add(crown);
+    group.position.set(x,0,z);scene.add(group);
+    resources.push({type:'wood',obj:group,pos:new THREE.Vector3(x,0,z),alive:true});
+  }
+  function makeRock(x,z){
+    const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.7+Math.random()*.45,0),mat(0x858d8d));rock.position.set(x,.45,z);rock.scale.y=.8;rock.rotation.set(Math.random(),Math.random(),Math.random());rock.castShadow=true;scene.add(rock);
+    resources.push({type:'stone',obj:rock,pos:new THREE.Vector3(x,0,z),alive:true});
+  }
+  function createWorld(){
+    scene=new THREE.Scene();scene.background=new THREE.Color(0x91cce5);scene.fog=new THREE.Fog(0x91cce5,38,105);
+    camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,180);
+    renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(renderer.domElement);
+    clock=new THREE.Clock();
+    scene.add(new THREE.HemisphereLight(0xd9f3ff,0x49613b,2));
+    const sun=new THREE.DirectionalLight(0xfff0ce,2.1);sun.position.set(-20,35,15);scene.add(sun);
+    const ground=new THREE.Mesh(new THREE.PlaneGeometry(WORLD,WORLD),mat(0x6eaa59));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+    const water=new THREE.Mesh(new THREE.PlaneGeometry(240,240),mat(0x287fa5));water.rotation.x=-Math.PI/2;water.position.y=-.22;scene.add(water);
+    // sandy shore ring
+    const sand=new THREE.Mesh(new THREE.RingGeometry(27,36,64),mat(0xd8c48a));sand.rotation.x=-Math.PI/2;sand.position.y=.015;scene.add(sand);
+    // simple cabin
+    box(-5,1.15,-7,5,2.3,4,mat(0x8b603b));const roof=box(-5,2.65,-7,5.8,.35,4.8,mat(0x60422d));roof.rotation.z=.08;
+    box(-5,1,-4.94,1.1,1.9,.1,mat(0x3d2b20));
+    // trees and rocks, avoid spawn
+    for(let i=0;i<50;i++){let a=Math.random()*Math.PI*2,r=9+Math.random()*24,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<8)continue;makeTree(x,z)}
+    for(let i=0;i<28;i++){let a=Math.random()*Math.PI*2,r=6+Math.random()*28,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<5)continue;makeRock(x,z)}
+    // scattered grass tufts
+    const grassMat=mat(0x4c8e48);
+    for(let i=0;i<100;i++){const x=(Math.random()-.5)*60,z=(Math.random()-.5)*60;const g=new THREE.Mesh(new THREE.ConeGeometry(.12,.55,4),grassMat);g.position.set(x,.25,z);scene.add(g)}
+    player=new THREE.Object3D();player.position.set(0,0,0);scene.add(player);player.add(camera);camera.position.set(0,1.65,0);
+    window.addEventListener('resize',resize);
+  }
+  function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+  function startGame(mode){
+    if(started)return;started=true;playerName=$('playerName').value.trim()||'Sobrevivente';$('menu').style.display='none';
+    if(!scene)createWorld();player.position.set(0,0,0);yaw=0;pitch=0;toast(mode==='solo'?'Boa sobrevivência! Explore e colete recursos.':'Conectando jogadores...');updateHUD();animate();
+  }
+  function collect(){
+    let nearest=null,dist=4.2;
+    for(const r of resources){if(!r.alive)continue;const d=player.position.distanceTo(r.pos);if(d<dist){dist=d;nearest=r}}
+    if(!nearest){toast('Chegue mais perto de uma árvore ou pedra.');return}
+    if(nearest.type==='wood'){wood+=hasAxe?3:1;toast(hasAxe?'Você coletou 3 madeiras!':'Você coletou 1 madeira!')}
+    else{stone+=hasAxe?2:1;toast(hasAxe?'Você coletou 2 pedras!':'Você coletou 1 pedra!')}
+    nearest.alive=false;scene.remove(nearest.obj);updateHUD();
+  }
+  function craft(){if(wood>=3&&stone>=2&&!hasAxe){wood-=3;stone-=2;hasAxe=true;toast('Machado fabricado! Coleta rende mais.')}else if(hasAxe){toast('Você já tem um machado.')}else{toast('Precisa de 3 madeiras e 2 pedras.')}updateHUD()}
+  function jump(){if(onGround){velY=6.3;onGround=false}}
+  function move(dt){
+    let forward=joy.y,side=joy.x;
+    if(keys['KeyW']||keys['ArrowUp'])forward=-1;if(keys['KeyS']||keys['ArrowDown'])forward=1;
+    if(keys['KeyA']||keys['ArrowLeft'])side=-1;if(keys['KeyD']||keys['ArrowRight'])side=1;
+    const len=Math.hypot(side,forward);if(len>1){side/=len;forward/=len}
+    const speed=keys['ShiftLeft']?7:4.3;
+    tempV.set(side,0,forward).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+    player.position.x+=tempV.x*speed*dt;player.position.z+=tempV.z*speed*dt;
+    const radius=Math.hypot(player.position.x,player.position.z);if(radius>31){player.position.x*=31/radius;player.position.z*=31/radius}
+    velY-=15*dt;player.position.y+=velY*dt;if(player.position.y<=0){player.position.y=0;velY=0;onGround=true}
+    camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
+    hunger=Math.max(0,hunger-dt*.32);if(hunger<=0)hp=Math.max(0,hp-dt*1.2);
+    if(hp<=0){hp=100;hunger=70;player.position.set(0,0,0);toast('Você desmaiou e voltou ao acampamento.')}
+    updateHUD();
+  }
+  function animate(){
+    if(!started)return;requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);move(dt);
+    if(conn&&conn.open&&performance.now()-lastNet>100){lastNet=performance.now();conn.send({t:'pos',id:myId,name:playerName,x:player.position.x,y:player.position.y,z:player.position.z,yaw,pitch})}
+    renderer.render(scene,camera);
+  }
+  function makeRemote(id,name){
+    if(players[id])return players[id];
+    const group=new THREE.Group();const body=new THREE.Mesh(new THREE.CapsuleGeometry(.35,.8,3,6),mat(0xe5a64a));body.position.y=.85;group.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.23,8,6),mat(0xf0c5a0));head.position.y=1.55;group.add(head);
+    const label=document.createElement('div');label.textContent=name||'Jogador';label.style.cssText='position:fixed;color:white;background:#10232bcc;padding:3px 6px;border-radius:6px;font:12px sans-serif;pointer-events:none;z-index:2;display:none';document.body.appendChild(label);
+    scene.add(group);players[id]={group,label,name};return players[id];
+  }
+  function netMessage(data){
+    if(!data)return;
+    if(data.t==='hello'){makeRemote(data.id,data.name);if(conn&&conn.open)conn.send({t:'hello',id:myId,name:playerName});return}
+    if(data.t==='pos'){const p=makeRemote(data.id,data.name);p.group.position.set(data.x,data.y,data.z);p.group.rotation.y=data.yaw;p.name=data.name;return}
+    if(data.t==='bye'){if(players[data.id]){scene.remove(players[data.id].group);players[data.id].label.remove();delete players[data.id]}}
+  }
+  function setupHost(){
+    if(!window.Peer){toast('Não carregou a biblioteca online. Confira a internet.');return}
+    isHost=true;startGame('online');
+    peer=new Peer();
+    peer.on('open',id=>{myId=id;roomId=id;$('status').textContent='Sala: '+id;toast('Sala criada! Compartilhe o código: '+id);$('roomCode').value=id});
+    peer.on('connection',c=>{conn=c;wireConnection(c)});
+    peer.on('error',e=>toast('Erro online: '+e.type+'. Tente criar outra sala.'));
+  }
+  function setupJoin(){
+    const id=$('roomCode').value.trim();if(!id){toast('Cole o código da sala primeiro.');return}
+    if(!window.Peer){toast('Não carregou a biblioteca online. Confira a internet.');return}
+    startGame('online');peer=new Peer();
+    peer.on('open',myid=>{myId=myid;conn=peer.connect(id,{reliable:true});wireConnection(conn);$('status').textContent='Conectando à sala...'});
+    peer.on('error',e=>toast('Erro online: '+e.type+'. Confira o código e tente novamente.'));
+  }
+  function wireConnection(c){
+    c.on('open',()=>{toast('Conectado ao outro jogador!');$('status').textContent='Online • conectado';c.send({t:'hello',id:myId,name:playerName})});
+    c.on('data',netMessage);c.on('close',()=>toast('A conexão com o outro jogador caiu.'));
+    c.on('error',()=>toast('Falha na conexão online.'));
+  }
+  $('soloBtn').onclick=()=>startGame('solo');
+  $('hostBtn').onclick=setupHost;$('joinBtn').onclick=setupJoin;
+  $('collectBtn').onclick=collect;$('makeAxe').onclick=craft;$('craftBtn').onclick=()=>{$('craftBox').style.display='block'};$('closeCraft').onclick=()=>{$('craftBox').style.display='none'};
+  $('jumpBtn').onclick=jump;$('leaveBtn').onclick=()=>{started=false;if(conn)conn.close();if(peer)peer.destroy();$('menu').style.display='flex';$('craftBox').style.display='none';$('status').textContent='Ilha Selvagem • Protótipo'};
+  window.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space')jump();if(e.code==='KeyE')collect()});
+  window.addEventListener('keyup',e=>keys[e.code]=false);
+  const base=$('joyBase'),knob=$('joyKnob');let baseRect;
+  function joyStart(e){e.preventDefault();joyTouch=e.pointerId;baseRect=base.getBoundingClientRect();base.setPointerCapture(e.pointerId);joyMove(e)}
+  function joyMove(e){if(joyTouch!==e.pointerId)return;const cx=baseRect.left+baseRect.width/2,cy=baseRect.top+baseRect.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const max=baseRect.width*.32;const l=Math.hypot(dx,dy);if(l>max){dx=dx/l*max;dy=dy/l*max}joy.x=dx/max;joy.y=dy/max;knob.style.transform=`translate(${dx}px,${dy}px)`}
+  function joyEnd(e){if(joyTouch!==e.pointerId)return;joyTouch=null;joy.x=joy.y=0;knob.style.transform='translate(0,0)'}
+  base.addEventListener('pointerdown',joyStart);base.addEventListener('pointermove',joyMove);base.addEventListener('pointerup',joyEnd);base.addEventListener('pointercancel',joyEnd);
+  document.addEventListener('pointerdown',e=>{if(!started||e.target.closest('button')||e.target.closest('#joyBase')||e.target.closest('#craftBox')||e.target.closest('#menu'))return;if(e.clientX>innerWidth*.35){lookTouch={id:e.pointerId,x:e.clientX,y:e.clientY};document.body.setPointerCapture?.(e.pointerId)}});
+  document.addEventListener('pointermove',e=>{if(!lookTouch||e.pointerId!==lookTouch.id)return;const dx=e.clientX-lookTouch.x,dy=e.clientY-lookTouch.y;lookTouch.x=e.clientX;lookTouch.y=e.clientY;yaw-=dx*.006;pitch-=dy*.004;pitch=Math.max(-1.35,Math.min(1.35,pitch))});
+  document.addEventListener('pointerup',e=>{if(lookTouch&&e.pointerId===lookTouch.id)lookTouch=null});
+  // Basic remote labels projected above other players.
+  function labelsLoop(){requestAnimationFrame(labelsLoop);if(!camera||!renderer)return;for(const id in players){const p=players[id];const v=p.group.position.clone().add(new THREE.Vector3(0,2.1,0)).project(camera);const visible=v.z<1; p.label.style.display=visible?'block':'none';if(visible){p.label.style.left=((v.x*.5+.5)*innerWidth)+'px';p.label.style.top=((-v.y*.5+.5)*innerHeight)+'px';p.label.style.transform='translate(-50%,-50%)'}}}
+  labelsLoop();
+})();
+</script>
+</body>
+</html>
